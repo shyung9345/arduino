@@ -2,14 +2,14 @@
  *
  * AsycWebServer_func
  *
- * task นี้จะทำหน้าที่ สร้าง WebServer แบบ Asynchronous
- * ทาง WebServer ไม่จำเป็นต้องรอให้ client นึงๆที่ติดต่อเข้ามา
- * เรียกทำงานจนจบกระบวนการ ค่อยให้ client ถัดไปใช้งาน
- * ทำให้การทำงานแบบ Multitask มีความไหลลื่นกว่าปกติ
+ * 此 task 負責建立非同步 WebServer。
+ * WebServer 不需要等待單一客戶端的完整請求處理完畢，
+ * 即可服務下一個客戶端。
+ * 這使得 Multitask 運作更加流暢，不阻塞其他執行緒。
  *
- * หมายเหตุ
- * ภายใน task ให้ใช้ DELAY() ตัวพิมพ์ใหญ่ทั้งหมด
- * ไลบรารี่ สร้าง WebServer แบบ Asynchronous ให้ติดตั้งไลบรารี่ทั้ง 2 นี้
+ * 備註
+ * task 內部請全部使用大寫的 DELAY()
+ * 建立非同步 WebServer 請安裝這兩個 Library:
  *    https://github.com/me-no-dev/AsyncTCP
  *    https://github.com/me-no-dev/ESPAsyncWebServer
  *
@@ -20,10 +20,10 @@
 AsyncWebServer server(80);
 
 void AsycWebServer_func(void*) {
-  //----พื้นที่สำหรับประกาศตัวแปรที่ใช้ภายใน task นี้เท่านั้น----
+  //----此區塊用於宣告僅在此 task 內部使用的變數----
 
   //-----------------------------------------------
-  VOID SETUP() {                       // VOID SETUP() ใน task ใช้พิมพ์ใหญ่
+  VOID SETUP() {                       // task 內的 VOID SETUP() 使用大寫
     server.on("/heap", HTTP_GET, [](AsyncWebServerRequest * request) {
       request->send(200, "text/plain", String(ESP.getFreeHeap()));
     });
@@ -44,7 +44,7 @@ void AsycWebServer_func(void*) {
     server.begin();
   }
 
-  VOID LOOP() {                        // VOID LOOP() ใน task ใช้พิมพ์ใหญ่
-    DELAY(1);                          // DELAY(..) ใน task ใช้พิมพ์ใหญ่
+  VOID LOOP() {                        // task 內的 VOID LOOP() 使用大寫
+    DELAY(1);                          // task 內的 DELAY(..) 使用大寫
   }
 }
