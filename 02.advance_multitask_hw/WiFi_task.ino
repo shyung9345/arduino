@@ -2,11 +2,11 @@
  *
  *  WiFi_func 
  *
- *  task นี้จะทำหน้าที่ เชื่อมต่อ WiFi เท่านั้น
- *  หากไวไฟหลุด จะข้ามไปสั่ง Blink_task ให้กระพริบถี่ๆ 
+ *  此 task 專門負責 WiFi 連線。
+ *  若 WiFi 斷線，會啟動 Blink_task 讓 LED 快速閃爍作為警示。
  *  
- *  หมายเหตุ
- *  ภายใน task ให้ใช้ DELAY() ตัวพิมพ์ใหญ่ทั้งหมด
+ *  備註
+ *  task 內部請全部使用大寫的 DELAY()
  *  
  ******************************************************/
 
@@ -14,19 +14,20 @@
 
 #define WIFI_SSID           "Cutie"
 #define WIFI_PASSWORD       "tttyyy123"
-#define WIFI_INTERVAL       2           // (นาที)   ช่วงเวลาที่จะเช็คสถานะไวไฟรอบถัดไป
+#define WIFI_INTERVAL       2           // (分鐘) 檢查 WiFi 狀態的時間間隔
 
 void WiFi_func(void*){  
-  //----พื้นที่สำหรับประกาศตัวแปรที่ใช้ภายใน task นี้เท่านั้น----
+  //----此區塊用於宣告僅在此 task 內部使用的變數----
 
   //-----------------------------------------------
 
-  VOID SETUP(){                       // VOID SETUP() ใน task ใช้พิมพ์ใหญ่
+  VOID SETUP(){                       // task 內的 VOID SETUP() 使用大寫
     WiFi.begin( WIFI_SSID, WIFI_PASSWORD );
   }
-  VOID LOOP(){                        // VOID LOOP() ใน task ใช้พิมพ์ใหญ่
+  
+  VOID LOOP(){                        // task 內的 VOID LOOP() 使用大寫
     if( !WiFi.isConnected() ) {
-      // สั่ง Blink_task ให้ ไฟกระพริบ ถี่ ทุก 80 ms
+      // WiFi 斷線時，指示 Blink_task 以每 80ms 的頻率快速閃爍
       xBlink_Delay = 80;  //ms
       Blink_task.start( Blink_func );
   
@@ -34,13 +35,13 @@ void WiFi_func(void*){
       Serial.print("[WiFi] WiFi Connected, IP : ");
       Serial.println(WiFi.localIP());
       
-      // สัง Blink_task หยุดการทำงาน หลังไวไฟเชื่อมต่อได้แล้ว
+      // WiFi 連線成功後，停止 Blink_task 的警示運作
       Blink_task.stop();  
 
-      // สั่งให้ AsyncWebServer_task เริ่มทำงาน
+      // 啟動 AsyncWebServer_task 開始提供網頁服務
       AsyncWebServer_task.start(AsycWebServer_func);
     }
     
-    DELAY( WIFI_INTERVAL *60000); // เช็คสถานะไวไฟทุกๆ กี่นาทีถัดไป
+    DELAY( WIFI_INTERVAL * 60000); // 等待指定分鐘後，再次檢查 WiFi 狀態
   }
 }
