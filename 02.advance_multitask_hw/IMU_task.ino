@@ -1,107 +1,40 @@
-// I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
-// for both classes must be in the include path of your project
+// 必須安裝 I2Cdev 與 MPU6050 Library
 #include "I2Cdev.h"
-
 #include "MPU6050_6Axis_MotionApps_V6_12.h"
-//#include "MPU6050.h" // not necessary if using MotionApps include file
 
-// Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
-// is used in I2Cdev.h
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include "Wire.h"
 #endif
 
-// class default I2C address is 0x68
-// specific I2C addresses may be passed as a parameter here
-// AD0 low = 0x68 (default for SparkFun breakout and InvenSense evaluation board)
-// AD0 high = 0x69
+// 預設 I2C 地址為 0x68 (AD0 接地)
 MPU6050 mpu;
-//MPU6050 mpu(0x69); // <-- use for AD0 high
 
-/* =========================================================================
-   NOTE: In addition to connection 3.3v, GND, SDA, and SCL, this sketch
-   depends on the MPU-6050's INT pin being connected to the Arduino's
-   external interrupt #0 pin. On the Arduino Uno and Mega 2560, this is
-   digital I/O pin 2.
-   ========================================================================= */
-
-/* =========================================================================
-   NOTE: Arduino v1.0.1 with the Leonardo board generates a compile error
-   when using Serial.write(buf, len). The Teapot output uses this method.
-   The solution requires a modification to the Arduino USBAPI.h file, which
-   is fortunately simple, but annoying. This will be fixed in the next IDE
-   release. For more info, see these links:
-
-   http://arduino.cc/forum/index.php/topic,109987.0.html
-   http://code.google.com/p/arduino/issues/detail?id=958
-   ========================================================================= */
-
-
-
-// uncomment "OUTPUT_READABLE_QUATERNION" if you want to see the actual
-// quaternion components in a [w, x, y, z] format (not best for parsing
-// on a remote host such as Processing or something though)
-//#define OUTPUT_READABLE_QUATERNION
-
-// uncomment "OUTPUT_READABLE_EULER" if you want to see Euler angles
-// (in degrees) calculated from the quaternions coming from the FIFO.
-// Note that Euler angles suffer from gimbal lock (for more info, see
-// http://en.wikipedia.org/wiki/Gimbal_lock)
-//#define OUTPUT_READABLE_EULER
-
-// uncomment "OUTPUT_READABLE_YAWPITCHROLL" if you want to see the yaw/
-// pitch/roll angles (in degrees) calculated from the quaternions coming
-// from the FIFO. Note this also requires gravity vector calculations.
-// Also note that yaw/pitch/roll angles suffer from gimbal lock (for
-// more info, see: http://en.wikipedia.org/wiki/Gimbal_lock)
+// 輸出 Yaw, Pitch, Roll 角度格式 (以度為單位)
 #define OUTPUT_READABLE_YAWPITCHROLL
 
-// uncomment "OUTPUT_READABLE_REALACCEL" if you want to see acceleration
-// components with gravity removed. This acceleration reference frame is
-// not compensated for orientation, so +X is always +X according to the
-// sensor, just without the effects of gravity. If you want acceleration
-// compensated for orientation, us OUTPUT_READABLE_WORLDACCEL instead.
-//#define OUTPUT_READABLE_REALACCEL
-
-// uncomment "OUTPUT_READABLE_WORLDACCEL" if you want to see acceleration
-// components with gravity removed and adjusted for the world frame of
-// reference (yaw is relative to initial orientation, since no magnetometer
-// is present in this case). Could be quite handy in some cases.
-//#define OUTPUT_READABLE_WORLDACCEL
-
-// uncomment "OUTPUT_TEAPOT" if you want output that matches the
-// format used for the InvenSense teapot demo
-//#define OUTPUT_TEAPOT
-
-
-
-#define INTERRUPT_PIN 2  // use pin 2 on Arduino Uno & most boards
-#define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
+#define INTERRUPT_PIN 2  // 使用 Arduino Uno 或多數開發板的 Pin 2 作為外部中斷腳位
+#define LED_PIN 13       
 bool blinkState = false;
 
-// MPU control/status vars
-bool dmpReady = false;  // set true if DMP init was successful
-uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
-uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
-uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
-uint16_t fifoCount;     // count of all bytes currently in FIFO
-uint8_t fifoBuffer[64]; // FIFO storage buffer
+// MPU 控制與狀態變數
+bool dmpReady = false;  // 若 DMP 初始化成功則設為 true
+uint8_t mpuIntStatus;   // 存放 MPU 實際的中斷狀態
+uint8_t devStatus;      // 每次設備操作的回傳狀態 (0 = 成功, !0 = 錯誤)
+uint16_t packetSize;    // 預期的 DMP 封包大小 (預設為 42 bytes)
+uint16_t fifoCount;     // 目前 FIFO 中的位元組總數
+uint8_t fifoBuffer[64]; // FIFO 儲存緩衝區
 
-// orientation/motion vars
-Quaternion q;           // [w, x, y, z]         quaternion container
-VectorFloat gravity;    // [x, y, z]            gravity vector
-//float euler[3];         // [psi, theta, phi]    Euler angle container
-float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
-
-
-// packet structure for InvenSense teapot demo
+// 姿態與運動變數
+Quaternion q;           // [w, x, y, z]         四元數容器
+VectorFloat gravity;    // [x, y, z]            重力向量
+float ypr[3];           // [yaw, pitch, roll]   Yaw/Pitch/Roll 容器
 
 
 // ================================================================
-// ===               INTERRUPT DETECTION ROUTINE                ===
+// ===                   外部中斷偵測常式                   ===
 // ================================================================
 
-volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+volatile bool mpuInterrupt = false;     // 指示 MPU 中斷腳位是否已觸發 High
 void dmpDataReady() {
   mpuInterrupt = true;
 }
@@ -110,107 +43,96 @@ void dmpDataReady() {
 void MPU_func(void*) {
  
 // ================================================================
-// ===                      INITIAL SETUP                       ===
+// ===                      初始化設定                      ===
 // ================================================================
 
 VOID SETUP() { 
-  // join I2C bus (I2Cdev library doesn't do this automatically)
+  // 加入 I2C 匯流排
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
   Wire.begin();
-  Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
+  Wire.setClock(400000); // 400kHz I2C 時脈
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
   Fastwire::setup(400, true);
 #endif
 
-  // initialize serial communication
-  // (115200 chosen because it is required for Teapot Demo output, but it's
-  // really up to you depending on your project)
   Serial.begin(115200);
-  while (!Serial); // wait for Leonardo enumeration, others continue immediately
+  while (!Serial); 
 
-  // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3V or Arduino
-  // Pro Mini running at 3.3V, cannot handle this baud rate reliably due to
-  // the baud timing being too misaligned with processor ticks. You must use
-  // 38400 or slower in these cases, or use some kind of external separate
-  // crystal solution for the UART timer.
-
-  // initialize device
+  // 初始化設備
   Serial.println(F("Initializing I2C devices..."));
   mpu.initialize();
   pinMode(INTERRUPT_PIN, INPUT);
 
-  // verify connection
+  // 驗證連線
   Serial.println(F("Testing device connections..."));
   Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
 
-
-  // load and configure the DMP
+  // 載入並設定 DMP
   Serial.println(F("Initializing DMP..."));
   devStatus = mpu.dmpInitialize();
 
-  // supply your own gyro offsets here, scaled for min sensitivity
+  // 提供陀螺儀與加速度計的偏移量 (Offsets)
   mpu.setXGyroOffset(51);
   mpu.setYGyroOffset(8);
   mpu.setZGyroOffset(21);
   mpu.setXAccelOffset(1150);
   mpu.setYAccelOffset(-50);
   mpu.setZAccelOffset(1060);
-  // make sure it worked (returns 0 if so)
+  
+  // 確認設定成功 (回傳 0 代表成功)
   if (devStatus == 0) {
-    // Calibration Time: generate offsets and calibrate our MPU6050
+    // 校準 MPU6050
     mpu.CalibrateAccel(6);
     mpu.CalibrateGyro(6);
     Serial.println();
     mpu.PrintActiveOffsets();
-    // turn on the DMP, now that it's ready
+    
+    // 啟動 DMP
     Serial.println(F("Enabling DMP..."));
     mpu.setDMPEnabled(true);
 
-    // enable Arduino interrupt detection
+    // 啟用外部中斷偵測
     Serial.print(F("Enabling interrupt detection (Arduino external interrupt "));
     Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
     Serial.println(F(")..."));
     attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
     mpuIntStatus = mpu.getIntStatus();
 
-    // set our DMP Ready flag so the main loop() function knows it's okay to use it
+    // 標記 DMP 已準備就緒，讓主迴圈知道可以開始讀取資料
     Serial.println(F("DMP ready! Waiting for first interrupt..."));
     dmpReady = true;
 
-    // get expected DMP packet size for later comparison
     packetSize = mpu.dmpGetFIFOPacketSize();
   } else {
-    // ERROR!
-    // 1 = initial memory load failed
-    // 2 = DMP configuration updates failed
-    // (if it's going to break, usually the code will be 1)
+    // 錯誤處理 (1 = 初始記憶體載入失敗, 2 = DMP 設定更新失敗)
     Serial.print(F("DMP Initialization failed (code "));
     Serial.print(devStatus);
     Serial.println(F(")"));
   }
 
-  // configure LED for output
   pinMode(LED_PIN, OUTPUT);
 }
 
 
 
 // ================================================================
-// ===                    MAIN PROGRAM LOOP                     ===
+// ===                    主程式迴圈                        ===
 // ================================================================
 
 VOID LOOP() {
-  // if programming failed, don't try to do anything
+  // 若初始化失敗，則不執行任何動作
   if (!dmpReady) return;
-  // read a packet from FIFO
-  if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
+  
+  // 從 FIFO 讀取封包
+  if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // 取得最新封包
 
 #ifdef OUTPUT_READABLE_YAWPITCHROLL
-    // display Euler angles in degrees
+    // 顯示 Euler 角度 (以度為單位)
     mpu.dmpGetQuaternion(&q, fifoBuffer);
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
 
+    // 寫入全域變數供 WebServer 讀取
     xax=ypr[0];
     xay=ypr[1];
     xaz=ypr[2];
@@ -221,28 +143,10 @@ VOID LOOP() {
     Serial.print(ypr[1] * 180 / M_PI);
     Serial.print("\t");
     Serial.print(ypr[2] * 180 / M_PI);
-    /*
-      mpu.dmpGetAccel(&aa, fifoBuffer);
-      Serial.print("\tRaw Accl XYZ\t");
-      Serial.print(aa.x);
-      Serial.print("\t");
-      Serial.print(aa.y);
-      Serial.print("\t");
-      Serial.print(aa.z);
-      mpu.dmpGetGyro(&gy, fifoBuffer);
-      Serial.print("\tRaw Gyro XYZ\t");
-      Serial.print(gy.x);
-      Serial.print("\t");
-      Serial.print(gy.y);
-      Serial.print("\t");
-      Serial.print(gy.z);
-    */
     Serial.println();
-
 #endif
 
-
-    // blink LED to indicate activity
+    // 閃爍 LED 指示資料正在讀取
     blinkState = !blinkState;
     digitalWrite(LED_PIN, blinkState);
   }
