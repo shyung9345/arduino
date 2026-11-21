@@ -1,18 +1,17 @@
 /*****************************************************************
- *  ตัวอย่าง 
- *     - WiFi task  : สำหรับจัดการ WiFi 
- *     - DHT task   : สำหรับ อ่านค่า DHT Sensor อย่างเดียวไปเรื่อยๆ
- *     - Blink task : สำหรับไฟกระพริบ แล้วแต่จะสั่งใช้งาน
- *     - AsyncWebServer task : สำหรับ สร้าง WebServer แบบ Asynchonous ทำงาน 
- *                             ทุกครั้งที่มีการต่อไวไฟสำเร็จ
+ *  範例 
+ *     - WiFi task  : 用於管理 WiFi
+ *     - DHT task   : 用於持續讀取 DHT 感測器的數值
+ *     - Blink task : 用於控制 LED 閃爍，可依需求呼叫執行
+ *     - AsyncWebServer task : 用於建立非同步網頁伺服器，每次成功連線 WiFi 後便會執行
  *  
- *  หมายเหตุ
- *  ติดตั้ง Library ทั้ง 4 ให้เรียบร้อย
- *  library สำหรับ WebServer แบบ Asynchronous
+ *  注意事項
+ *  請確保已安裝這 4 個函式庫
+ *  用於非同步網頁伺服器的函式庫
  *     https://github.com/me-no-dev/AsyncTCP
  *     https://github.com/me-no-dev/ESPAsyncWebServer
  * 
- *  library สำหรับ DHT sensor
+ *  用於 DHT 感測器的函式庫
  *     https://github.com/adafruit/Adafruit_Sensor
  *     https://github.com/adafruit/DHT-sensor-library
  *
@@ -20,18 +19,18 @@
 
 #include <TridentTD_EasyFreeRTOS32.h>
 
-// ประกาศ ตัวแปร task และ function สำหรับ task
+// 宣告任務變數與任務函式
 TridentOS   DHT_task, Blink_task, WiFi_task, AsyncWebServer_task, IMU_task;
 void DHT_func(void*), Blink_func(void*), WiFi_func(void*), AsyncWebServer_func(void*), MPU_func(void*);
 
-//----พื้นที่ส่วนนี้สำหรับประกาศตัวแปรที่ใช้แชร์ข้อมูลกันระหว่าง task ------
-int     xBlink_Delay;    // กำหนดความเร็วของไฟกระพริบ       (มาตรฐานให้ใช้ x นำ)
-float   xDHT_temp;       // อุณหภูมิ จาก DHT ค่าล่าสุดที่อ่านได้  (มาตรฐานให้ใช้ x นำ)
-float   xDHT_humid;      // ความชื้น จาก DHT ค่าล่าสุดที่อ่านได้  (มาตรฐานให้ใช้ x นำ)
+//----此區塊用於宣告任務間共用資料的變數 ------
+int     xBlink_Delay;    // 設定 LED 閃爍速度（標準命名規範以 x 開頭）
+float   xDHT_temp;       // DHT 最新讀取到的溫度值（標準命名規範以 x 開頭）
+float   xDHT_humid;      // DHT 最新讀取到的濕度值（標準命名規範以 x 開頭）
 float   xax,xay,xaz;
 //---------------------------------------------------------
 
-void setup(){  // setup() หลักตัวพิมพ์เล็ก
+void setup(){  // 小寫的主函式 setup()
   Serial.begin(115200); Serial.println();
     
   DHT_task.start( DHT_func );
@@ -39,4 +38,4 @@ void setup(){  // setup() หลักตัวพิมพ์เล็ก
   IMU_task.start( MPU_func );  
 }
 
-void loop(){}  // loop() หลักตัวพิมพ์เล็ก ไม่จำเป็นต้องใช้แต่ให้มีไว้เสมอ
+void loop(){}  // 小寫的主函式 loop()，雖然不一定需要用到，但請務必保留
